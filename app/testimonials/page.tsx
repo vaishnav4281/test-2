@@ -29,17 +29,70 @@ const categories = [
   { id: "pension", label: "Pension Planning" }
 ]
 
+// Sample testimonials for fallback
+const sampleTestimonials: Testimonial[] = [
+  {
+    id: "1",
+    name: "John Doe",
+    role: "Business Owner",
+    location: "Mumbai",
+    rating: 5,
+    content: "The financial advisor helped me choose the right insurance policy for my business. Highly recommended!",
+    image_url: "/testimonials/person1.jpg",
+    category: "business",
+    date: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "2",
+    name: "Jane Smith",
+    role: "Teacher",
+    location: "Delhi",
+    rating: 5,
+    content: "I was confused about retirement planning, but the advisor made it simple to understand. Great service!",
+    image_url: "/testimonials/person2.jpg",
+    category: "retirement",
+    date: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "3",
+    name: "Robert Johnson",
+    role: "Engineer",
+    location: "Bangalore",
+    rating: 4,
+    content: "The premium calculator helped me find the right policy within my budget. Very useful tool!",
+    image_url: "/testimonials/person3.jpg",
+    category: "calculator",
+    date: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+]
+
 export default function TestimonialsPage() {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [usingFallback, setUsingFallback] = useState(false)
 
   useEffect(() => {
     async function fetchTestimonials() {
       try {
         setLoading(true)
         setError(null)
+        
+        // Check if Supabase URL is available
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          console.warn("Supabase URL not found, using fallback testimonials")
+          setTestimonials(sampleTestimonials)
+          setUsingFallback(true)
+          setLoading(false)
+          return
+        }
         
         const { data, error } = await supabase
           .from('testimonials')
@@ -48,9 +101,13 @@ export default function TestimonialsPage() {
 
         if (error) throw error
         setTestimonials(data || [])
+        setUsingFallback(false)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch testimonials')
-        console.error('Error fetching testimonials:', err)
+        console.error("Error fetching testimonials:", err)
+        setError("Failed to load testimonials. Please try again later.")
+        // Use fallback testimonials on error
+        setTestimonials(sampleTestimonials)
+        setUsingFallback(true)
       } finally {
         setLoading(false)
       }
