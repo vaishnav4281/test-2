@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: Request) {
   try {
     const { name, email, phone, message, service } = await request.json()
 
     if (!process.env.RESEND_API_KEY) {
-      throw new Error('Email service is not configured')
+      return NextResponse.json(
+        { error: 'Email service is not configured' },
+        { status: 500 }
+      )
     }
 
     if (!process.env.ADMIN_EMAIL) {
-      throw new Error('Admin email is not configured')
+      return NextResponse.json(
+        { error: 'Admin email is not configured' },
+        { status: 500 }
+      )
     }
+
+    // Dynamically import Resend
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
     // Send email to admin
     const adminEmail = await resend.emails.send({
@@ -32,7 +39,10 @@ export async function POST(request: Request) {
     })
 
     if (adminEmail.error) {
-      throw new Error(`Failed to send admin notification: ${adminEmail.error.message}`)
+      return NextResponse.json(
+        { error: `Failed to send admin notification: ${adminEmail.error.message}` },
+        { status: 500 }
+      )
     }
 
     // Send confirmation email to user
@@ -49,26 +59,22 @@ export async function POST(request: Request) {
           <li><strong>Service:</strong> ${service}</li>
           <li><strong>Message:</strong> ${message}</li>
         </ul>
-        <p>If you have any urgent questions, please feel free to call us at +91 9447218188.</p>
         <p>Best regards,<br>Financial Advisor Team</p>
       `
     })
 
     if (userEmail.error) {
-      throw new Error(`Failed to send user confirmation: ${userEmail.error.message}`)
+      return NextResponse.json(
+        { error: `Failed to send user confirmation: ${userEmail.error.message}` },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ 
-      success: true,
-      message: 'Emails sent successfully'
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Email sending error:', error)
     return NextResponse.json(
-      { 
-        error: error instanceof Error ? error.message : 'Failed to send email',
-        details: error instanceof Error ? error.stack : undefined
-      },
+      { error: 'Failed to send email' },
       { status: 500 }
     )
   }
